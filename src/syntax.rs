@@ -22,6 +22,15 @@ impl Term {
 }
 
 impl Term {
+    pub fn irrelevant(&self, index: usize) -> bool {
+        match self {
+            Term::Var(i) => *i != index,
+            Term::Global(_) => true,
+            Term::Func(_, body) => body.irrelevant(index + 1),
+            Term::App(func, arg) => func.irrelevant(index) && arg.irrelevant(index),
+        }
+    }
+
     pub fn shift(&self, cutoff: usize, amount: usize) -> Term {
         match self {
             Term::Var(i) => {
