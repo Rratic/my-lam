@@ -131,7 +131,7 @@ impl<'src> Parser<'src> {
     // ============ 程序解析 ============
 
     fn parse_decl(&mut self) -> Result<Decl, ParseError> {
-        while self.check(TokenType::Newline) {
+        while self.check(TokenType::Newline) || self.check(TokenType::Comment) {
             self.advance();
         }
 

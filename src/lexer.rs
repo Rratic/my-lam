@@ -12,6 +12,7 @@ pub enum TokenType {
     Assign,   // =
     At,       // @
     Newline,  // \n
+    Comment,  // #
     Eof,
     Error,
 }
@@ -27,6 +28,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Assign => write!(f, "'='"),
             TokenType::At => write!(f, "'@'"),
             TokenType::Newline => write!(f, "new line"),
+            TokenType::Comment => write!(f, "comment"),
             TokenType::Eof => write!(f, "end of file"),
             TokenType::Error => write!(f, "unresolved symbol"),
         }
@@ -61,10 +63,6 @@ pub struct Lexer<'src> {
     chars: Peekable<CharIndices<'src>>,
     /// 当前位置
     pos: usize,
-    /// 是否经过换行，因为是换行敏感的
-    crossed_newline: bool,
-    /// 是否跳过了单个 '/' 防止使用 O(n) 的位置设置
-    skipped_slash: bool,
 }
 
 fn is_legal_ident_char(c: char) -> bool {
@@ -77,8 +75,6 @@ impl<'src> Lexer<'src> {
             literal,
             chars: literal.char_indices().peekable(),
             pos: 0,
-            crossed_newline: false,
-            skipped_slash: false,
         }
     }
 
@@ -97,27 +93,10 @@ impl<'src> Lexer<'src> {
 
     /// 跳过空白和注释
     fn skip_whitespace(&mut self) {
-        self.crossed_newline = false;
-        self.skipped_slash = false;
         loop {
             match self.peek() {
                 Some(' ' | '\t' | '\r') => {
                     self.advance();
-                }
-                Some('\n') => {
-                    self.advance();
-                    self.crossed_newline = true;
-                }
-                Some('/') => {
-                    self.advance();
-                    if self.peek() == Some('/') {
-                        while self.peek().is_some_and(|c| c != '\n') {
-                            self.advance();
-                        }
-                    } else {
-                        self.skipped_slash = true;
-                        break;
-                    }
                 }
                 _ => break,
             }
@@ -137,15 +116,7 @@ impl<'src> Lexer<'src> {
 
 impl<'src> TokenStream<'src> for Lexer<'src> {
     fn next_token(&mut self) -> Token {
-        self.skip_whitespace(); // 跳过空白和注释
-
-        if self.crossed_newline {
-            return Token::new(TokenType::Newline, "\n");
-        }
-
-        if self.skipped_slash {
-            return Token::new(TokenType::Error, "/");
-        }
+        self.skip_whitespace(); // 跳过空白
 
         let start = self.pos;
 
@@ -155,12 +126,22 @@ impl<'src> TokenStream<'src> for Lexer<'src> {
 
         match c {
             // 单字符
+            '\n' => Token::new(TokenType::Newline, "\n"),
             'λ' => Token::new(TokenType::Lambda, "λ"),
             '.' => Token::new(TokenType::Dot, "."),
             '(' => Token::new(TokenType::LeftPar, "("),
             ')' => Token::new(TokenType::RightPar, ")"),
             '=' => Token::new(TokenType::Assign, "="),
             '@' => Token::new(TokenType::At, "@"),
+            '#' => {
+                while self.peek().is_some_and(|c| c != '\n') {
+                    self.advance();
+                }
+
+                let literal = &self.literal[start..self.pos];
+
+                Token::new(TokenType::Comment, literal)
+            }
 
             // 标识符
             _ if is_legal_ident_char(c) => self.read_ident(start),
