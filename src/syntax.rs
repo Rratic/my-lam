@@ -12,13 +12,47 @@ impl Term {
         Term::Global(name.into())
     }
 
-    #[cfg(test)]
     pub fn func(name: impl Into<String>, body: Term) -> Self {
         Term::Func(name.into(), Box::new(body))
     }
 
     pub fn app(func: impl Into<Box<Term>>, arg: Term) -> Self {
         Term::App(func.into(), Box::new(arg))
+    }
+}
+
+impl Term {
+    pub fn shift(&self, cutoff: usize, amount: usize) -> Term {
+        match self {
+            Term::Var(i) => {
+                if *i >= cutoff {
+                    Term::Var(*i + amount)
+                } else {
+                    Term::Var(*i)
+                }
+            }
+            Term::Global(name) => Term::Global(name.clone()),
+            Term::Func(name, body) => Term::func(name, body.shift(cutoff + 1, amount)),
+            Term::App(func, arg) => {
+                Term::app(func.shift(cutoff, amount), arg.shift(cutoff, amount))
+            }
+        }
+    }
+
+    pub fn subst(&self, index: usize, term: &Term) -> Term {
+        match self {
+            Term::Var(i) => match (*i).cmp(&index) {
+                std::cmp::Ordering::Equal => term.clone(),
+                std::cmp::Ordering::Greater => Term::Var(*i - 1),
+                std::cmp::Ordering::Less => Term::Var(*i),
+            },
+            Term::Global(name) => Term::Global(name.clone()),
+            Term::Func(name, body) => {
+                let shifted = term.shift(0, 1);
+                Term::func(name, body.subst(index + 1, &shifted))
+            }
+            Term::App(func, arg) => Term::app(func.subst(index, term), arg.subst(index, term)),
+        }
     }
 }
 

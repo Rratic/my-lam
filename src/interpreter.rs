@@ -1,40 +1,34 @@
 //! 解释器
 
-use crate::{parser::*, syntax::*};
-use std::collections::{HashMap, VecDeque};
+use crate::syntax::*;
+use std::collections::HashMap;
 
-fn read_context(expr: Term, context: &HashMap<String, Term>) -> Term {
-    match expr {
+pub fn evaluate(term: Term, context: &HashMap<String, Term>) -> Result<Term, String> {
+    match term {
+        Term::Var(i) => Err(format!("Unbound index: #{}", i)),
         Term::Global(name) => {
-            if context.contains_key(&name.clone()) {
-                context.get(&name).unwrap().clone()
+            // 查找全局变量，递归求值
+            if let Some(refer) = context.get(&name) {
+                evaluate(refer.clone(), context)
             } else {
-                Term::Global(name)
+                Ok(Term::Global(name))
             }
         }
-        Term::App(func, arg) => Term::App(Box::new(read_context(*func, context)), arg),
-        _ => expr,
-    }
-}
-
-fn evaluate_inner(expr: Term, env: VecDeque<Term>) -> (Term, VecDeque<Term>) {
-    match expr {
-        Term::Var(i) => (env[i].clone(), env),
-        Term::Global(_) => (expr, env),
-        Term::Func(_, body) => (*body, env),
-        Term::App(func, arg) => {
-            let (major, env2) = evaluate_inner(*func, env);
-            let (subst, mut env3) = evaluate_inner(*arg, env2);
-            env3.push_front(subst);
-            evaluate_inner(major, env3)
+        Term::Func(..) => Ok(term), // 是值
+        Term::App(f, a) => {
+            // 先求值函数和参数
+            let f_val = evaluate(*f, context)?;
+            let a_val = evaluate(*a, context)?;
+            match f_val {
+                Term::Func(_, body) => {
+                    // 将参数替换到函数体，然后求值
+                    let substituted = body.subst(0, &a_val);
+                    evaluate(substituted, context)
+                }
+                _ => Err(format!("Cannot apply unknown value: {}", f_val)),
+            }
         }
     }
-}
-
-pub fn evaluate(expr: Term, context: &HashMap<String, Term>) -> Result<Term, ParseError> {
-    let read = read_context(expr, context);
-    let (result, _) = evaluate_inner(read, VecDeque::new());
-    Ok(result)
 }
 
 #[cfg(test)]
@@ -43,13 +37,61 @@ mod tests {
 
     #[test]
     fn test_evaluate() {
-        let context = HashMap::<String, Term>::new();
+        let mut context = HashMap::<String, Term>::new();
 
-        let expr = Term::App(
-            Box::new(Term::Func("x".into(), Box::new(Term::Global("U".into())))),
-            Box::new(Term::Global("M".into())),
+        assert_eq!(
+            evaluate(
+                Term::App(
+                    Box::new(Term::Func("x".into(), Box::new(Term::Global("U".into())))),
+                    Box::new(Term::Global("M".into())),
+                ),
+                &context
+            ),
+            Ok(Term::Global("U".into()))
         );
 
-        assert_eq!(evaluate(expr, &context), Ok(Term::Global("U".into())));
+        assert_eq!(
+            evaluate(
+                Term::App(
+                    Box::new(Term::Func("x".into(), Box::new(Term::Var(0)))),
+                    Box::new(Term::Global("M".into())),
+                ),
+                &context
+            ),
+            Ok(Term::Global("M".into()))
+        );
+
+        context.insert(
+            "S".into(),
+            Term::func(
+                "x",
+                Term::func(
+                    "y",
+                    Term::func(
+                        "z",
+                        Term::app(
+                            Term::app(Term::Var(2), Term::Var(0)),
+                            Term::app(Term::Var(1), Term::Var(0)),
+                        ),
+                    ),
+                ),
+            ),
+        );
+
+        context.insert("K".into(), Term::func("x", Term::func("y", Term::Var(1))));
+
+        assert_eq!(
+            evaluate(
+                Term::app(
+                    Term::app(
+                        Term::app(Term::global("S"), Term::global("K")),
+                        Term::global("K"),
+                    ),
+                    Term::global("M")
+                ),
+                &context
+            ),
+            Ok(Term::Global("M".into()))
+        );
     }
 }
