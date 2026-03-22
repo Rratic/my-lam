@@ -3,32 +3,48 @@
 use crate::syntax::*;
 use std::collections::HashMap;
 
-pub fn evaluate(term: Term, context: &HashMap<String, Term>) -> Result<Term, String> {
+fn restore_globals(term: Term, context: &HashMap<String, Term>) -> Term {
     match term {
-        Term::Var(i) => Err(format!("Unbound index: #{}", i)),
+        Term::Var(_) => term,
         Term::Global(name) => {
-            // 查找全局变量，递归求值
-            if let Some(refer) = context.get(&name) {
-                evaluate(refer.clone(), context)
+            if let Some(restored) = context.get(&name) {
+                restore_globals(restored.clone(), context)
             } else {
-                Ok(Term::Global(name))
+                Term::Global(name)
             }
         }
-        Term::Func(..) => Ok(term), // 是值
+        Term::Func(name, body) => Term::func(name, restore_globals(*body, context)),
+        Term::App(func, arg) => Term::app(
+            restore_globals(*func, context),
+            restore_globals(*arg, context),
+        ),
+    }
+}
+
+fn evaluate_inner(term: Term) -> Result<Term, String> {
+    match term {
+        Term::Var(i) => Err(format!("Unbound index: #{}", i)),
+        Term::Global(_) => Ok(term), // 当作自由变量
+        Term::Func(..) => Ok(term),  // 是值
         Term::App(f, a) => {
             // 先求值函数和参数
-            let f_val = evaluate(*f, context)?;
-            let a_val = evaluate(*a, context)?;
+            let f_val = evaluate_inner(*f)?;
+            let a_val = evaluate_inner(*a)?;
             match f_val {
                 Term::Func(_, body) => {
                     // 将参数替换到函数体，然后求值
                     let substituted = body.subst(0, &a_val);
-                    evaluate(substituted, context)
+                    evaluate_inner(substituted)
                 }
                 _ => Err(format!("Cannot apply unknown value: {}", f_val)),
             }
         }
     }
+}
+
+pub fn evaluate(term: Term, context: &HashMap<String, Term>) -> Result<Term, String> {
+    let term = restore_globals(term, context);
+    evaluate_inner(term)
 }
 
 #[cfg(test)]
