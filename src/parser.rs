@@ -26,8 +26,6 @@ pub struct Parser<'src> {
     stream: Lexer<'src>,
     current: Token,
     previous: Token,
-    /// 当前 Token 与上一个 Token 之间是否有换行
-    at_newline: bool,
 }
 
 impl<'src> Parser<'src> {
@@ -38,7 +36,6 @@ impl<'src> Parser<'src> {
             stream,
             current,
             previous: Token::new(TokenType::Eof, ""),
-            at_newline: false,
         }
     }
 
@@ -48,7 +45,6 @@ impl<'src> Parser<'src> {
 
     fn advance(&mut self) -> Token {
         self.previous = std::mem::replace(&mut self.current, self.stream.next_token());
-        self.at_newline = self.stream.crossed_newline();
         self.previous.clone()
     }
 

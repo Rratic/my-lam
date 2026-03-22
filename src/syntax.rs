@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Term {
-    Var(i32),                // 使用 de Bruijn 索引
+    Var(usize),              // 使用 de Bruijn 索引
     Global(String),          // 全局变量
     Func(String, Box<Term>), // 标记参数名
     App(Box<Term>, Box<Term>),
@@ -19,6 +19,6 @@ impl std::fmt::Display for Term {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Decl {
-	Definition(String, Term),
-	Command(String, Term)
+    Definition(String, Term),
+    Command(String, Term),
 }

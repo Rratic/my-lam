@@ -1,4 +1,4 @@
-use crate::{lexer::*, parser::*, syntax::*};
+use crate::{elaborator::*, interpreter::*, lexer::*, parser::*, syntax::*};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
@@ -23,10 +23,18 @@ impl Context {
                 if self.decls.contains_key(&name) {
                     return Err(parse_error(format!("Redefinition of <{}>", name)));
                 }
-                self.decls.insert(name, expr);
+
+                let elaborated = elaborate(expr);
+                self.decls.insert(name, elaborated);
                 Ok("".into())
             }
             Decl::Command(operation, expr) => match operation.as_str() {
+                "eval" => {
+                    let elaborated = elaborate(expr);
+                    let evaluated = evaluate(elaborated, &self.decls)?;
+                    Ok(format!("{}", evaluated))
+                }
+
                 otherwise => Err(parse_error(format!("Unknown command: {}", otherwise))),
             },
         }

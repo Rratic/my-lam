@@ -9,7 +9,7 @@ fn elaborate_with(term: &Term, stack: &mut Vec<String>) -> Term {
             let len = stack.len();
             for i in 0..len {
                 if stack[i] == *name {
-                    return Term::Var((len - i - 1) as i32);
+                    return Term::Var(len - i - 1);
                 }
             }
             term.clone()

@@ -51,9 +51,6 @@ impl Token {
 pub trait TokenStream<'src> {
     /// 获取下一个 Token
     fn next_token(&mut self) -> Token;
-
-    /// 是否经过换行
-    fn crossed_newline(&self) -> bool;
 }
 
 #[derive(Clone)]
@@ -171,10 +168,6 @@ impl<'src> TokenStream<'src> for Lexer<'src> {
             // 无法识别
             _ => Token::new(TokenType::Error, &c.to_string()),
         }
-    }
-
-    fn crossed_newline(&self) -> bool {
-        self.crossed_newline
     }
 }
 
