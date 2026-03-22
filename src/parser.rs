@@ -101,8 +101,16 @@ impl<'src> Parser<'src> {
     fn parse_app_expr(&mut self) -> Result<Term, ParseError> {
         let mut expr = self.parse_atom()?;
         loop {
-            if self.check(TokenType::Ident) || self.check(TokenType::LeftPar) {
+            if self.check(TokenType::Ident) {
                 let arg = self.parse_atom()?;
+                expr = Term::App(Box::new(expr), Box::new(arg));
+            } else if self.check(TokenType::LeftPar) {
+                self.advance();
+                let arg = self.parse_expr()?;
+                self.expect(TokenType::RightPar)?;
+                expr = Term::App(Box::new(expr), Box::new(arg));
+            } else if self.check(TokenType::Lambda) {
+                let arg = self.parse_expr()?;
                 expr = Term::App(Box::new(expr), Box::new(arg));
             } else {
                 break;
@@ -127,6 +135,10 @@ impl<'src> Parser<'src> {
     // ============ 程序解析 ============
 
     fn parse_decl(&mut self) -> Result<Decl, ParseError> {
+        while self.check(TokenType::Newline) {
+            self.advance();
+        }
+
         if self.try_match(TokenType::At) {
             let operation = self.parse_name()?;
             let expr = self.parse_expr()?;
