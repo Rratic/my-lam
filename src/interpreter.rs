@@ -31,7 +31,8 @@ fn evaluate_inner(term: Term) -> Term {
                 Term::App(f, a) => {
                     // eta-reduce
                     if Term::Var(0) == *a && f.irrelevant(0) {
-                        *f
+                        let inner = *f;
+                        evaluate_inner(inner)
                     } else {
                         Term::func(name, Term::App(f, a))
                     }
