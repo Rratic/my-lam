@@ -18,7 +18,7 @@ use crate::syntax::*;
 
 pub type ParseError = String;
 
-fn parse_error(message: impl Into<String>) -> ParseError {
+pub fn parse_error(message: impl Into<String>) -> ParseError {
     message.into()
 }
 

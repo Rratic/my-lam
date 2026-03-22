@@ -178,6 +178,19 @@ impl<'src> TokenStream<'src> for Lexer<'src> {
     }
 }
 
+impl Iterator for Lexer<'_> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let token = self.next_token();
+        if token.class == TokenType::Eof {
+            None
+        } else {
+            Some(token)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
