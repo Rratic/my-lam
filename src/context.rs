@@ -21,7 +21,7 @@ impl Context {
         match decl {
             Decl::Definition(name, expr) => {
                 if self.decls.contains_key(&name) {
-                    return Err(parse_error(format!("Redefinition of <{}>", name)));
+                    return Err(parse_error(format!("Redefinition of '{}'", name)));
                 }
 
                 let elaborated = elaborate(expr);
@@ -57,6 +57,6 @@ impl Context {
             let decl_info = self.process_inner(decl)?;
             info = format!("{}\n{}", info, decl_info);
         }
-        Ok(info)
+        Ok(info.trim().into())
     }
 }

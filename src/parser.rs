@@ -99,15 +99,15 @@ impl<'src> Parser<'src> {
         loop {
             if self.check(TokenType::Ident) {
                 let arg = self.parse_atom()?;
-                expr = Term::App(Box::new(expr), Box::new(arg));
+                expr = Term::app(expr, arg);
             } else if self.check(TokenType::LeftPar) {
                 self.advance();
                 let arg = self.parse_expr()?;
                 self.expect(TokenType::RightPar)?;
-                expr = Term::App(Box::new(expr), Box::new(arg));
+                expr = Term::app(expr, arg);
             } else if self.check(TokenType::Lambda) {
                 let arg = self.parse_expr()?;
-                expr = Term::App(Box::new(expr), Box::new(arg));
+                expr = Term::app(expr, arg);
             } else {
                 break;
             }
@@ -169,21 +169,26 @@ mod tests {
 
     #[test]
     fn test_parse_expr() {
-        assert_eq!(parsed_expr("a"), Term::Global("a".into()));
+        assert_eq!(parsed_expr("a"), Term::global("a"));
+
+        assert_eq!(parsed_expr("λx. x"), Term::func("x", Term::global("x")));
 
         assert_eq!(
-            parsed_expr("λx. x"),
-            Term::Func("x".into(), Box::new(Term::Global("x".into())))
+            parsed_expr("a b c"),
+            Term::app(
+                Term::app(Term::global("a"), Term::global("b")),
+                Term::global("c")
+            )
         );
 
         assert_eq!(
             parsed_expr("λx. (λy. y) λz. z"),
-            Term::Func(
-                "x".into(),
-                Box::new(Term::App(
-                    Box::new(Term::Func("y".into(), Box::new(Term::Global("y".into()))),),
-                    Box::new(Term::Func("z".into(), Box::new(Term::Global("z".into()))))
-                ))
+            Term::func(
+                "x",
+                Term::app(
+                    Term::func("y", Term::global("y")),
+                    Term::func("z", Term::global("z"))
+                )
             )
         );
     }
@@ -197,7 +202,15 @@ mod tests {
     fn test_basics() {
         assert_eq!(
             parsed("a = b"),
-            vec![Decl::Definition("a".into(), Term::Global("b".into()))]
+            vec![Decl::Definition("a".into(), Term::global("b"))]
         );
+
+        assert_eq!(
+            parsed("@eval I I"),
+            vec![Decl::Command(
+                "eval".into(),
+                Term::app(Term::global("I"), Term::global("I"))
+            )]
+        )
     }
 }

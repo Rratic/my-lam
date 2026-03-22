@@ -37,28 +37,25 @@ mod tests {
 
     #[test]
     fn test_elaborate() {
-        let ex1 = Term::Func("x".into(), Box::new(Term::Global("E".into())));
+        let ex1 = Term::func("x", Term::global("E"));
         assert_eq!(elaborate(ex1.clone()), ex1);
 
         assert_eq!(
-            elaborate(Term::Func("x".into(), Box::new(Term::Global("x".into())))),
-            Term::Func("x".into(), Box::new(Term::Var(0)))
+            elaborate(Term::func("x", Term::global("x"))),
+            Term::func("x", Term::Var(0))
         );
 
         assert_eq!(
-            elaborate(Term::Func(
-                "x".into(),
-                Box::new(Term::App(
-                    Box::new(Term::Func("y".into(), Box::new(Term::Global("y".into()))),),
-                    Box::new(Term::Func("z".into(), Box::new(Term::Global("x".into()))))
-                ))
+            elaborate(Term::func(
+                "x",
+                Term::app(
+                    Term::func("y", Term::global("y")),
+                    Term::func("z", Term::global("x"))
+                )
             )),
-            Term::Func(
-                "x".into(),
-                Box::new(Term::App(
-                    Box::new(Term::Func("y".into(), Box::new(Term::Var(0))),),
-                    Box::new(Term::Func("z".into(), Box::new(Term::Var(1))))
-                ))
+            Term::func(
+                "x",
+                Term::app(Term::func("y", Term::Var(0)), Term::func("z", Term::Var(1)))
             )
         )
     }
