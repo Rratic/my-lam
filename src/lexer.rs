@@ -209,11 +209,12 @@ mod tests {
     #[test]
     fn test_lines() {
         assert_eq!(
-            tokens("a=b // comment = @@@t t t\nccc\t=\tu"),
+            tokens("a=b # comment = @@@t t t\nccc\t=\tu"),
             vec![
                 TokenType::Ident,
                 TokenType::Assign,
                 TokenType::Ident,
+                TokenType::Comment,
                 TokenType::Newline,
                 TokenType::Ident,
                 TokenType::Assign,
