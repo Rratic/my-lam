@@ -31,8 +31,13 @@ impl Context {
             Decl::Command(operation, expr) => match operation.as_str() {
                 "eval" => {
                     let elaborated = elaborate(expr);
-                    let evaluated = evaluate(elaborated, &self.decls)?;
-                    Ok(format!("{}", evaluated))
+                    let out = reduce_normal_order(elaborated, &self.decls)?;
+                    Ok(format!("{}", out))
+                }
+                "simp" => {
+                    let elaborated = elaborate(expr);
+                    let out = simplify(elaborated, &self.decls)?;
+                    Ok(format!("{}", out))
                 }
 
                 otherwise => Err(parse_error(format!("Unknown command: {}", otherwise))),

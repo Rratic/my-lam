@@ -22,12 +22,13 @@ impl Term {
 }
 
 impl Term {
-    pub fn irrelevant(&self, index: usize) -> bool {
+    /// `index` 级 de Bruijn 变量是否不在 `self` 中自由出现（进入 `Func` 时索引加一）。
+    pub fn var_not_free(&self, index: usize) -> bool {
         match self {
-            Term::Var(i) => *i < index,
+            Term::Var(i) => *i != index,
             Term::Global(_) => true,
-            Term::Func(_, body) => body.irrelevant(index + 1),
-            Term::App(func, arg) => func.irrelevant(index) && arg.irrelevant(index),
+            Term::Func(_, body) => body.var_not_free(index + 1),
+            Term::App(func, arg) => func.var_not_free(index) && arg.var_not_free(index),
         }
     }
 
